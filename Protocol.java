@@ -12,6 +12,9 @@ import java.net.UnknownHostException;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
+import java.io.FileInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ObjectInputStream;
 
 
 public class Protocol {
@@ -117,10 +120,51 @@ public class Protocol {
      * set the checksum of the data segment.
      * The method returns -1 if this is the last data segment (no more data to be read) and 0 otherwise.
      */
+    private FileInputStream fileInputStream; // Make this an instance variable so it's not recreated every time
     public int readData() {
-        System.exit(0);
-        return 0;
+        try {
+            if (this.fileInputStream == null) { // Initialize the fileInputStream only once
+                this.fileInputStream = new FileInputStream(this.inputFile);
+            }
+
+            // Create a buffer to hold the data chunk (up to maxPayload size)
+            byte[] buffer = new byte[this.maxPayload];
+
+            // Read data from the file into the buffer
+            int bytesRead = this.fileInputStream.read(buffer, 0, this.maxPayload);
+
+            // If no more data to read, close the stream and return -1
+            if (bytesRead == -1) {
+                this.fileInputStream.close();
+                return -1;
+            }
+
+            // Convert the buffer to a string for the payload
+            String payload = new String(buffer, 0, bytesRead);
+
+            // Set the data segment's payload
+            this.dataSeg.setPayLoad(payload);
+            this.dataSeg.setSize(bytesRead);  // Set the size of the segment
+            this.dataSeg.setType(SegmentType.Data);  // Set the segment type to "Data"
+
+            // Toggle the sequence number between 0 and 1
+            int newSq = (this.dataSeg.getSq() == 0) ? 1 : 0;
+            this.dataSeg.setSq(newSq);
+
+            // Update remaining and sent bytes
+            this.remainingBytes -= bytesRead;
+            this.sentBytes += bytesRead;
+
+            return 0;  // Successfully read a segment
+
+        } catch (IOException e) {
+            System.err.println("SENDER: Error reading file: " + e.getMessage());
+            System.exit(1);
+        }
+        return -1;  // Error state
     }
+
+
 
     /*
      * This method sends the current data segment (dataSeg) to the server
@@ -128,12 +172,40 @@ public class Protocol {
      * 		computes a checksum of the data and sets the data segment's checksum prior to sending.
      * output relevant information messages for the user to follow progress of the file transfer.
      */
-    public void sendData()  {
-        System.exit(0);
+    public void sendData() {
+        try {
+            // Calculate checksum for the payload
+            int checksumValue = checksum(this.dataSeg.getPayLoad(), false);
+            this.dataSeg.setChecksum(checksumValue);
+
+            // Serialize the data segment into bytes
+            ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+            ObjectOutputStream objStream = new ObjectOutputStream(byteStream);
+            objStream.writeObject(this.dataSeg);
+            objStream.flush();
+            byte[] segmentBytes = byteStream.toByteArray();
+
+            // Create a DatagramPacket to send the data segment
+            DatagramPacket packet = new DatagramPacket(segmentBytes, segmentBytes.length, this.ipAddress, this.portNumber);
+
+            // Send the packet
+            this.socket.send(packet);
+
+            // Increment total segments
+            this.totalSegments++;
+
+            // Print progress message
+            System.out.println("SENDER: Sending segment: sq: " + this.dataSeg.getSq() + ", size: " + this.dataSeg.getSize() + ", checksum: " + checksumValue + ", content: (" + this.dataSeg.getPayLoad() + ")");
+
+        } catch (IOException e) {
+            System.err.println("SENDER: Error sending data segment: " + e.getMessage());
+        }
     }
 
 
-    //Decide on the right place to :
+
+
+//Decide on the right place to :
     // *  	update the remaining bytes so that it records the remaining bytes to be read from the file after this segment is transferred. When all file bytes have been read, the remaining bytes will be zero
     // *    update the number of total sent segments
     // *    update the number of sent bytes
@@ -147,12 +219,38 @@ public class Protocol {
      * return true if no error
      * output relevant information messages for the user to follow progress of the file transfer.
      */
-    public boolean receiveAck(int expectedDataSq)  {
-        System.exit(0);
+    public boolean receiveAck(int expectedDataSq) {
+        try {
+            // Create a buffer to receive the ACK segment
+            byte[] incomingData = new byte[1024];
+            DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
+
+            // Wait for the incoming ACK from the server
+            this.socket.receive(incomingPacket);
+
+            // Deserialize the ACK segment
+            ByteArrayInputStream byteStream = new ByteArrayInputStream(incomingPacket.getData());
+            ObjectInputStream objStream = new ObjectInputStream(byteStream);
+            this.ackSeg = (Segment) objStream.readObject();
+
+            // Check if the ACK sequence number matches the expected one
+            if (this.ackSeg.getSq() == expectedDataSq) {
+                System.out.println("SENDER: ACK sq= " + this.ackSeg.getSq() + " RECEIVED.");
+                return true;
+            } else {
+                System.err.println("SENDER: Received incorrect ACK. Expected: " + expectedDataSq + ", but got: " + this.ackSeg.getSq());
+                System.exit(1);
+            }
+
+        } catch (IOException | ClassNotFoundException e) {
+            System.err.println("SENDER: Error receiving ACK: " + e.getMessage());
+            System.exit(1);
+        }
         return false;
     }
 
-    /*
+
+/*
      * This method sends the current data segment (dataSeg) to the server with errors
      * This method:
      * 	 	may  corrupt the checksum according to the loss probability specified if the transfer mode is with timeout (wt)
