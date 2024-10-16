@@ -1,6 +1,6 @@
 /*
  * Replace the following string of 0s with your student number
- * 000000000
+ * 230266960
  */
 
 import java.io.File;
@@ -9,6 +9,10 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectOutputStream;
+import java.net.DatagramPacket;
+
 
 public class Protocol {
 
@@ -72,8 +76,36 @@ public class Protocol {
      * This method does not set any of the attributes of the protocol.
      */
     public void sendMetadata() {
-        System.exit(0);
+        try {
+            // Create a MetaData object and set its values
+            MetaData metaData = new MetaData();
+            metaData.setSize(this.fileSize); // Instead of setFileSize()
+            metaData.setName(this.outputFileName); // Instead of setFileName()
+            metaData.setMaxSegSize(this.maxPayload); // Instead of setMaxPayloadSize()
+
+
+            // Serialize MetaData to bytes using ObjectOutputStream
+            ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+            ObjectOutputStream objStream = new ObjectOutputStream(byteStream);
+            objStream.writeObject(metaData);
+            objStream.flush();
+            byte[] metaDataBytes = byteStream.toByteArray();
+
+            // Create a DatagramPacket to send the metadata
+            DatagramPacket packet = new DatagramPacket(metaDataBytes, metaDataBytes.length, this.ipAddress, this.portNumber);
+
+            // Send the metadata packet through the socket
+            this.socket.send(packet);
+
+            // Output message to track progress
+            System.out.println("SENDER: Metadata sent successfully (file: " + this.outputFileName + ", size: " + this.fileSize + ", max payload size: " + this.maxPayload + ")");
+
+        } catch (IOException e) {
+            // Handle IO exceptions
+            System.err.println("SENDER: Error while sending metadata: " + e.getMessage());
+        }
     }
+
 
     /*
      * This method:
