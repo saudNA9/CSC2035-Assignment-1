@@ -174,6 +174,9 @@ public class Protocol {
      */
     public void sendData() {
         try {
+            // Add separator line before sending the segment
+            System.out.println("----------------------------------------");
+
             // Calculate checksum for the payload
             int checksumValue = checksum(this.dataSeg.getPayLoad(), false);
             this.dataSeg.setChecksum(checksumValue);
@@ -236,6 +239,8 @@ public class Protocol {
             // Check if the ACK sequence number matches the expected one
             if (this.ackSeg.getSq() == expectedDataSq) {
                 System.out.println("SENDER: ACK sq= " + this.ackSeg.getSq() + " RECEIVED.");
+                // Add separator line
+                System.out.println("----------------------------------------");
                 return true;
             } else {
                 System.err.println("SENDER: Received incorrect ACK. Expected: " + expectedDataSq + ", but got: " + this.ackSeg.getSq());
