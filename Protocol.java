@@ -275,7 +275,7 @@ public class Protocol {
      *	This method does not receive any segment from the server
      * output relevant information messages for the user to follow progress of the file transfer.
      */
-    public void sendDataWithError() {
+    public void sendDataWithError() throws IOException {
         try {
             // Check if the segment should be corrupted based on the loss probability
             boolean corrupted = isCorrupted(this.lossProb);
@@ -329,7 +329,7 @@ public class Protocol {
      *
      * relevant methods that need to be used include: readData(), sendDataWithError(), receiveAck().
      */
-    public void sendFileWithTimeout() throws IOException {
+    void sendFileWithTimeout() throws IOException {
         // Set the socket timeout (in milliseconds)
         this.socket.setSoTimeout(this.timeout * 1000); // Timeout set to 10 seconds
 
