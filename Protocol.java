@@ -15,6 +15,7 @@ import java.net.DatagramPacket;
 import java.io.FileInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ObjectInputStream;
+import java.net.SocketTimeoutException; // This import is necessary for the SocketTimeoutException
 
 
 public class Protocol {
@@ -127,11 +128,17 @@ public class Protocol {
                 this.fileInputStream = new FileInputStream(this.inputFile);
             }
 
+            // Check if there are still bytes remaining to be read
+            if (this.remainingBytes <= 0) {
+                return -1;  // No more data to read
+            }
+
             // Create a buffer to hold the data chunk (up to maxPayload size)
-            byte[] buffer = new byte[this.maxPayload];
+            int bytesToRead = (int) Math.min(this.maxPayload, this.remainingBytes); // Read remaining bytes if less than maxPayload
+            byte[] buffer = new byte[bytesToRead];
 
             // Read data from the file into the buffer
-            int bytesRead = this.fileInputStream.read(buffer, 0, this.maxPayload);
+            int bytesRead = this.fileInputStream.read(buffer, 0, bytesToRead);
 
             // If no more data to read, close the stream and return -1
             if (bytesRead == -1) {
@@ -175,7 +182,6 @@ public class Protocol {
     public void sendData() {
         try {
             // Add separator line before sending the segment
-            System.out.println("----------------------------------------");
 
             // Calculate checksum for the payload
             int checksumValue = checksum(this.dataSeg.getPayLoad(), false);
@@ -228,7 +234,7 @@ public class Protocol {
             byte[] incomingData = new byte[1024];
             DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
 
-            // Wait for the incoming ACK from the server
+            // Wait for the incoming ACK from the server (this will throw SocketTimeoutException if it times out)
             this.socket.receive(incomingPacket);
 
             // Deserialize the ACK segment
@@ -239,23 +245,28 @@ public class Protocol {
             // Check if the ACK sequence number matches the expected one
             if (this.ackSeg.getSq() == expectedDataSq) {
                 System.out.println("SENDER: ACK sq= " + this.ackSeg.getSq() + " RECEIVED.");
-                // Add separator line
                 System.out.println("----------------------------------------");
                 return true;
             } else {
                 System.err.println("SENDER: Received incorrect ACK. Expected: " + expectedDataSq + ", but got: " + this.ackSeg.getSq());
-                System.exit(1);
+                return false;  // Indicating incorrect ACK
             }
 
+        } catch (SocketTimeoutException e) {
+            // Handle timeout
+            System.err.println("SENDER: Timeout occurred while waiting for ACK.");
+            return false;  // Indicating timeout, so caller can handle retries
         } catch (IOException | ClassNotFoundException e) {
             System.err.println("SENDER: Error receiving ACK: " + e.getMessage());
-            System.exit(1);
+            return false;
         }
-        return false;
     }
 
 
-/*
+
+
+
+    /*
      * This method sends the current data segment (dataSeg) to the server with errors
      * This method:
      * 	 	may  corrupt the checksum according to the loss probability specified if the transfer mode is with timeout (wt)
@@ -264,9 +275,45 @@ public class Protocol {
      *	This method does not receive any segment from the server
      * output relevant information messages for the user to follow progress of the file transfer.
      */
-    public void sendDataWithError() throws IOException {
-        System.exit(0);
+    public void sendDataWithError() {
+        try {
+            // Check if the segment should be corrupted based on the loss probability
+            boolean corrupted = isCorrupted(this.lossProb);
+
+            // Calculate checksum for the payload, corrupt it if needed
+            int checksumValue = checksum(this.dataSeg.getPayLoad(), corrupted);
+            this.dataSeg.setChecksum(checksumValue);
+
+            // Serialize the data segment into bytes
+            ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+            ObjectOutputStream objStream = new ObjectOutputStream(byteStream);
+            objStream.writeObject(this.dataSeg);
+            objStream.flush();
+            byte[] segmentBytes = byteStream.toByteArray();
+
+            // Create a DatagramPacket to send the data segment
+            DatagramPacket packet = new DatagramPacket(segmentBytes, segmentBytes.length, this.ipAddress, this.portNumber);
+
+            // Send the packet
+            this.socket.send(packet);
+
+            // Increment the total segments count here
+            this.totalSegments++;  // Make sure this is being updated
+
+            // Print progress message with corruption info
+            if (corrupted) {
+                System.out.println("SENDER: Segment corrupted. Sending corrupted segment: sq: " + this.dataSeg.getSq() + ", size: " + this.dataSeg.getSize() + ", checksum: 0, content: (" + this.dataSeg.getPayLoad() + ")");
+            } else {
+                System.out.println("SENDER: Sending segment: sq: " + this.dataSeg.getSq() + ", size: " + this.dataSeg.getSize() + ", checksum: " + checksumValue + ", content: (" + this.dataSeg.getPayLoad() + ")");
+            }
+
+        } catch (IOException e) {
+            System.err.println("SENDER: Error sending data segment with error: " + e.getMessage());
+        }
     }
+
+
+
 
     /*
      * This method transfers the given file using the resources provided by the protocol structure.
@@ -282,10 +329,49 @@ public class Protocol {
      *
      * relevant methods that need to be used include: readData(), sendDataWithError(), receiveAck().
      */
-    void sendFileWithTimeout() throws IOException
-    {
-        System.exit(0);
+    public void sendFileWithTimeout() throws IOException {
+        // Set the socket timeout (in milliseconds)
+        this.socket.setSoTimeout(this.timeout * 1000); // Timeout set to 10 seconds
+
+        while (this.remainingBytes != 0) {
+            // Read the next chunk of data from the file
+            if (readData() == -1) {
+                break; // End of file, no more data to send
+            }
+
+            // Send the data with possible corruption
+            sendDataWithError();
+
+            int retries = 0; // Keep track of the number of retries for this segment
+
+            // Wait for ACK or retransmit if no ACK received
+            while (retries < this.maxRetries) {
+                boolean ackReceived = receiveAck(this.dataSeg.getSq());
+                if (ackReceived) {
+                    // ACK received, break out of retry loop
+                    break;
+                } else {
+                    retries++; // Increment the retry count
+                    if (retries >= this.maxRetries) {
+                        System.err.println("SENDER: Max retries reached. Terminating client.");
+                        System.exit(1); // Terminate after max retries
+                    }
+                    System.out.println("SENDER: TIMEOUT ALERT: Re-sending the same segment again, current retry: " + retries);
+                    sendDataWithError(); // Re-send the segment (could be corrupted)
+                    this.resentSegments++; // Track the number of resent segments
+                }
+            }
+        }
+
+        // After the file transfer is complete
+        System.out.println("Total Segments Sent: " + this.totalSegments);
+        System.out.println("Re-sent Segments: " + this.resentSegments);
+        System.out.println("SENDER: File is sent.");
     }
+
+
+
+
     /*
      *  transfer the given file using the resources provided by the protocol structure using GoBackN.
      */
