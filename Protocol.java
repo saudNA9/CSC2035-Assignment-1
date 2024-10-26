@@ -111,22 +111,16 @@ public class Protocol {
     }
 
 
-    /*
-     * This method:
-     *  	read the next chunk of data from the file into the data segment (dataSeg) payload.
-     *  	set the correct type of the data segment
-     *  	set the correct sequence number of the data segment.
-     *  	set the data segment's size field to the number of bytes read from the file
-     * This method DOES NOT:
-     * set the checksum of the data segment.
-     * The method returns -1 if this is the last data segment (no more data to be read) and 0 otherwise.
-     */
-    private FileInputStream fileInputStream; // Make this an instance variable so it's not recreated every time
     public int readData() {
+        FileInputStream fileInputStream = null; // Declare FileInputStream locally
+
         try {
-            if (this.fileInputStream == null) { // Initialize the fileInputStream only once
-                this.fileInputStream = new FileInputStream(this.inputFile);
-            }
+            // Initialize the FileInputStream
+            fileInputStream = new FileInputStream(this.inputFile);
+
+            // Move the file pointer to the correct position by skipping already read bytes
+            long bytesToSkip = this.fileSize - this.remainingBytes;
+            fileInputStream.skip(bytesToSkip);
 
             // Check if there are still bytes remaining to be read
             if (this.remainingBytes <= 0) {
@@ -138,11 +132,10 @@ public class Protocol {
             byte[] buffer = new byte[bytesToRead];
 
             // Read data from the file into the buffer
-            int bytesRead = this.fileInputStream.read(buffer, 0, bytesToRead);
+            int bytesRead = fileInputStream.read(buffer, 0, bytesToRead);
 
-            // If no more data to read, close the stream and return -1
+            // If no more data to read, return -1
             if (bytesRead == -1) {
-                this.fileInputStream.close();
                 return -1;
             }
 
@@ -167,9 +160,19 @@ public class Protocol {
         } catch (IOException e) {
             System.err.println("SENDER: Error reading file: " + e.getMessage());
             System.exit(1);
+        } finally {
+            try {
+                if (fileInputStream != null) {
+                    fileInputStream.close();
+                }
+            } catch (IOException e) {
+                System.err.println("SENDER: Error closing file input stream: " + e.getMessage());
+            }
         }
         return -1;  // Error state
     }
+
+
 
 
 
@@ -366,7 +369,6 @@ public class Protocol {
         // After the file transfer is complete
         System.out.println("Total Segments Sent: " + this.totalSegments);
         System.out.println("Re-sent Segments: " + this.resentSegments);
-        System.out.println("SENDER: File is sent.");
     }
 
 
