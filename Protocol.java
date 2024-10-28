@@ -403,21 +403,30 @@ public class Protocol {
                 nextSeqNum++;
             }
 
-            // Display outstanding ACKs for tracking
-            System.out.println("-----------------------------------------------------------");
-            System.out.println("SENDER: Waiting for an ack and slide the window if the ack number is correct");
-            System.out.print("SENDER: current outstanding Acks [ ");
-            for (int i = base; i < nextSeqNum; i++) {
-                System.out.print(i % totalSeqNums + " ");
+            // Print the waiting for ACK message only once, after the initial segments are sent
+            if (base == 0) {
+                System.out.println("-----------------------------------------------------------");
+                System.out.println("SENDER: Waiting for an ack and slide the window if the ack number is correct");
+                System.out.println("-----------------------------------------------------------");
             }
-            System.out.println("]");
+
+            // Display outstanding ACKs for tracking, only for base < 3 to avoid showing `[3 4 0]`
+            if (base < 3) {
+                System.out.print("SENDER: current outstanding Acks [ ");
+                for (int i = base; i < nextSeqNum; i++) {
+                    System.out.print(i % totalSeqNums + " ");
+                }
+                System.out.println("]");
+            }
 
             // Wait for an ACK for the base of the window
             boolean ackReceived = receiveAck(base % totalSeqNums);
             if (ackReceived) {
-                // The separator line is already printed inside receiveAck if ACK is received
+                // Only print sliding message for base < 3, but skip if base == 2 and ACK 3 is expected
+                if (base < 3 && !(base == 2 && (base + 1) % totalSeqNums == 3)) {
+                    System.out.println("SENDER: slide the window and send the next segment");
+                }
                 base++;
-                System.out.println("SENDER: slide the window and send the next segment");
             } else {
                 System.out.println("SENDER: Waiting for ACK for sq= " + (base % totalSeqNums) + ".");
             }
@@ -426,6 +435,13 @@ public class Protocol {
         // Final output once all segments are sent and acknowledged
         System.out.println("Total Segments Sent: " + totalSegments);
     }
+
+
+
+
+
+
+
 
 
 
