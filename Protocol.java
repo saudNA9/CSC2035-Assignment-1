@@ -114,50 +114,50 @@ public class Protocol {
 
 
     public int readData() {
-        FileInputStream fileInputStream = null; // Declare FileInputStream locally
+        FileInputStream fileInputStream = null; //I've declared the FileInputStream locally
 
         try {
-            // Initialize the FileInputStream
+            // Here it will initialize the FileInputStream
             fileInputStream = new FileInputStream(this.inputFile);
 
-            // Move the file pointer to the correct position by skipping already read bytes
+            // I made this to move the file pointer to the correct position by skipping already read bytes
             long bytesToSkip = this.fileSize - this.remainingBytes;
             fileInputStream.skip(bytesToSkip);
 
-            // Check if there are still bytes remaining to be read
+            // This will check if there are still bytes remaining to be read
             if (this.remainingBytes <= 0) {
-                return -1;  // No more data to read
+                return -1;
             }
 
-            // Create a buffer to hold the data chunk (up to maxPayload size)
-            int bytesToRead = (int) Math.min(this.maxPayload, this.remainingBytes); // Read remaining bytes if less than maxPayload
+            // As for here it will create a buffer to hold the data chunk (up to maxPayload size)
+            int bytesToRead = (int) Math.min(this.maxPayload, this.remainingBytes); // This will read remaining bytes if less than maxPayload
             byte[] buffer = new byte[bytesToRead];
 
-            // Read data from the file into the buffer
+            // It will Read data from the file into the buffer
             int bytesRead = fileInputStream.read(buffer, 0, bytesToRead);
 
-            // If no more data to read, return -1
+            // If no more data to read, it will return -1
             if (bytesRead == -1) {
                 return -1;
             }
 
-            // Convert the buffer to a string for the payload
+            // I've added this to convert the buffer to a string for the payload
             String payload = new String(buffer, 0, bytesRead);
 
-            // Set the data segment's payload
+            // I have Set the data segment's payload
             this.dataSeg.setPayLoad(payload);
-            this.dataSeg.setSize(bytesRead);  // Set the size of the segment
-            this.dataSeg.setType(SegmentType.Data);  // Set the segment type to "Data"
+            this.dataSeg.setSize(bytesRead);  // Then I have set the size of the segment
+            this.dataSeg.setType(SegmentType.Data);  // Finally I've set the segment type to "Data"
 
-            // Toggle the sequence number between 0 and 1
+            // This will toggle the sequence number between 0 and 1
             int newSq = (this.dataSeg.getSq() == 0) ? 1 : 0;
             this.dataSeg.setSq(newSq);
 
-            // Update remaining and sent bytes
+            // This will update remaining and sent bytes
             this.remainingBytes -= bytesRead;
             this.sentBytes += bytesRead;
 
-            return 0;  // Successfully read a segment
+            return 0;
 
         } catch (IOException e) {
             System.err.println("SENDER: Error reading file: " + e.getMessage());
@@ -171,7 +171,7 @@ public class Protocol {
                 System.err.println("SENDER: Error closing file input stream: " + e.getMessage());
             }
         }
-        return -1;  // Error state
+        return -1;
     }
 
 
