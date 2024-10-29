@@ -280,30 +280,30 @@ public class Protocol {
      */
     public void sendDataWithError() throws IOException {
         try {
-            // Check if the segment should be corrupted based on the loss probability
+            // This is done to check if the segment should be corrupted based on the loss probability
             boolean corrupted = isCorrupted(this.lossProb);
 
-            // Calculate checksum for the payload, corrupt it if needed
+            // I've made this to calculate checksum for the payload, corrupt it if needed
             int checksumValue = checksum(this.dataSeg.getPayLoad(), corrupted);
             this.dataSeg.setChecksum(checksumValue);
 
-            // Serialize the data segment into bytes
+            // This will serialize the data segment into bytes
             ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
             ObjectOutputStream objStream = new ObjectOutputStream(byteStream);
             objStream.writeObject(this.dataSeg);
             objStream.flush();
             byte[] segmentBytes = byteStream.toByteArray();
 
-            // Create a DatagramPacket to send the data segment
+            // Here I've created a DatagramPacket to send the data segment
             DatagramPacket packet = new DatagramPacket(segmentBytes, segmentBytes.length, this.ipAddress, this.portNumber);
 
-            // Send the packet
+            // This will send the packet
             this.socket.send(packet);
 
-            // Increment the total segments count here
-            this.totalSegments++;  // Make sure this is being updated
+            // As for here it will increment the total segments count
+            this.totalSegments++;
 
-            // Print progress message with corruption info
+            // As for here it will print progress message with corruption info
             if (corrupted) {
                 System.out.println("SENDER: Segment corrupted. Sending corrupted segment: sq: " + this.dataSeg.getSq() + ", size: " + this.dataSeg.getSize() + ", checksum: 0, content: (" + this.dataSeg.getPayLoad() + ")");
             } else {
