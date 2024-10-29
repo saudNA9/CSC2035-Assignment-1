@@ -233,32 +233,32 @@ public class Protocol {
      */
     public boolean receiveAck(int expectedDataSq) {
         try {
-            // Create a buffer to receive the ACK segment
+            // This will create a buffer to receive the ACK segment
             byte[] incomingData = new byte[1024];
             DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
 
-            // Wait for the incoming ACK from the server (this will throw SocketTimeoutException if it times out)
+            // As for here it will Wait for the incoming ACK from the server (this will throw SocketTimeoutException if it times out)
             this.socket.receive(incomingPacket);
 
-            // Deserialize the ACK segment
+            // I have deserialized the ACK segment
             ByteArrayInputStream byteStream = new ByteArrayInputStream(incomingPacket.getData());
             ObjectInputStream objStream = new ObjectInputStream(byteStream);
             this.ackSeg = (Segment) objStream.readObject();
 
-            // Check if the ACK sequence number matches the expected one
+            // Here I've made check if the ACK sequence number matches the expected one
             if (this.ackSeg.getSq() == expectedDataSq) {
                 System.out.println("SENDER: ACK sq= " + this.ackSeg.getSq() + " RECEIVED.");
                 System.out.println("----------------------------------------");
                 return true;
             } else {
                 System.err.println("SENDER: Received incorrect ACK. Expected: " + expectedDataSq + ", but got: " + this.ackSeg.getSq());
-                return false;  // Indicating incorrect ACK
+                return false;  // This is used for indicating incorrect ACK
             }
 
         } catch (SocketTimeoutException e) {
-            // Handle timeout
+            // I've added this to handle timeout
             System.err.println("SENDER: Timeout occurred while waiting for ACK.");
-            return false;  // Indicating timeout, so caller can handle retries
+            return false;  // Here it's indicating timeout, so caller can handle retries
         } catch (IOException | ClassNotFoundException e) {
             System.err.println("SENDER: Error receiving ACK: " + e.getMessage());
             return false;
