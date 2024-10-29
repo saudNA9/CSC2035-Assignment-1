@@ -378,63 +378,82 @@ public class Protocol {
      *  transfer the given file using the resources provided by the protocol structure using GoBackN.
      */
     void sendFileNormalGBN(int window) throws IOException {
-        int base = 0; // Base of the window
-        int nextSeqNum = 0; // Next sequence number to send
-        int totalSegments = 0; // Total number of segments sent
-
-        // Set up the total number of sequence numbers allowed
-        int totalSeqNums = window + 1;
+        int base = 0;
+        int nextSeqNum = 0;
+        int expectedAck = 0;
+        boolean transferComplete = false;
+        int totalSegments = 0;
 
         System.out.println("---------------Sending the segments in the initial window --------------------------");
 
-        // While there are still bytes remaining to be sent
-        while (this.remainingBytes != 0 || base < nextSeqNum) {
-            // Send segments while within the window limit and there's still data to read
-            while (nextSeqNum < base + window && this.remainingBytes != 0) {
+        while (!transferComplete) {
+            // Send segments within the window and if there are bytes left to read
+            while (nextSeqNum < base + window && remainingBytes > 0) {
                 if (readData() == -1) {
-                    break; // End of file, no more data to send
+                    System.out.println("SENDER: End of file reached.");
+                    break;
                 }
 
-                // Set sequence number and send data
-                this.dataSeg.setSq(nextSeqNum % totalSeqNums);
-                sendData(); // Let sendData() handle the output details
-
+                int seqNum = nextSeqNum % (window + 1);
+                dataSeg.setSq(seqNum);
+                sendData();
                 totalSegments++;
                 nextSeqNum++;
             }
 
-            // Print the waiting for ACK message only once, after the initial segments are sent
-            if (base == 0) {
-                System.out.println("-----------------------------------------------------------");
-                System.out.println("SENDER: Waiting for an ack and slide the window if the ack number is correct");
-                System.out.println("-----------------------------------------------------------");
+            // Display the current outstanding ACKs
+            System.out.println("\n-----------------------------------------------------------");
+            System.out.println("SENDER: Waiting for an ack and slide the window if the ack number is correct");
+            System.out.println("-----------------------------------------------------------");
+            System.out.print("SENDER: current outstanding Acks [ ");
+            for (int i = base; i < nextSeqNum; i++) {
+                System.out.print(i % (window + 1) + " ");
+            }
+            System.out.println("]");
+
+            // Receive acknowledgments and slide the window as needed
+            while (expectedAck < nextSeqNum) {
+                if (receiveAck(expectedAck % (window + 1))) {
+                    base++;
+                    expectedAck++;
+
+                    if (remainingBytes > 0 && nextSeqNum < base + window) {
+                        System.out.println("SENDER: slide the window and send the next segment");
+                        if (readData() != -1) {
+                            int seqNum = nextSeqNum % (window + 1);
+                            dataSeg.setSq(seqNum);
+                            sendData();
+                            totalSegments++;
+                            nextSeqNum++;
+
+                            // Display updated outstanding ACKs
+                            System.out.println("\n-----------------------------------------------------------");
+                            System.out.print("SENDER: current outstanding Acks [ ");
+                            for (int i = base; i < nextSeqNum; i++) {
+                                System.out.print(i % (window + 1) + " ");
+                            }
+                            System.out.println("]");
+                        }
+                    }
+                } else {
+                    // Break if the ACK is not the expected one
+                    break;
+                }
             }
 
-            // Display outstanding ACKs for tracking, only for base < 3 to avoid showing `[3 4 0]`
-            if (base < 3) {
-                System.out.print("SENDER: current outstanding Acks [ ");
-                for (int i = base; i < nextSeqNum; i++) {
-                    System.out.print(i % totalSeqNums + " ");
-                }
-                System.out.println("]");
-            }
-
-            // Wait for an ACK for the base of the window
-            boolean ackReceived = receiveAck(base % totalSeqNums);
-            if (ackReceived) {
-                // Only print sliding message for base < 3, but skip if base == 2 and ACK 3 is expected
-                if (base < 3 && !(base == 2 && (base + 1) % totalSeqNums == 3)) {
-                    System.out.println("SENDER: slide the window and send the next segment");
-                }
-                base++;
-            } else {
-                System.out.println("SENDER: Waiting for ACK for sq= " + (base % totalSeqNums) + ".");
+            // Complete transfer when all segments are sent and acknowledged
+            if (remainingBytes <= 0 && expectedAck >= nextSeqNum) {
+                transferComplete = true;
             }
         }
 
-        // Final output once all segments are sent and acknowledged
-        System.out.println("Total Segments Sent: " + totalSegments);
+        // Final message with total segments sent
+        System.out.println("Total segments sent: " + totalSegments);
     }
+
+
+
+
 
 
 
