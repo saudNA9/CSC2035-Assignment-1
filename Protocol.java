@@ -333,40 +333,41 @@ public class Protocol {
      * relevant methods that need to be used include: readData(), sendDataWithError(), receiveAck().
      */
     void sendFileWithTimeout() throws IOException {
-        // Set the socket timeout (in milliseconds)
+        // I have added this to set the socket timeout (in milliseconds)
         this.socket.setSoTimeout(this.timeout * 1000); // Timeout set to 10 seconds
 
         while (this.remainingBytes != 0) {
-            // Read the next chunk of data from the file
+            // This will read the next chunk of data from the file
             if (readData() == -1) {
-                break; // End of file, no more data to send
+                break; // This means it's End of file, no more data to send
             }
 
-            // Send the data with possible corruption
+            // I've added this line code to send the data with possible corruption
             sendDataWithError();
 
-            int retries = 0; // Keep track of the number of retries for this segment
+            int retries = 0; // This will keep track of the number of retries for this segment
 
-            // Wait for ACK or retransmit if no ACK received
+            // As for here it will wait for ACK or retransmit if no ACK received
             while (retries < this.maxRetries) {
                 boolean ackReceived = receiveAck(this.dataSeg.getSq());
                 if (ackReceived) {
-                    // ACK received, break out of retry loop
+                    // This shows that ACK received, break out of retry loop
                     break;
                 } else {
-                    retries++; // Increment the retry count
+                    retries++; // Here it will Increment the retry count
                     if (retries >= this.maxRetries) {
                         System.err.println("SENDER: Max retries reached. Terminating client.");
-                        System.exit(1); // Terminate after max retries
+                        System.exit(1); // This will terminate after max retries
                     }
                     System.out.println("SENDER: TIMEOUT ALERT: Re-sending the same segment again, current retry: " + retries);
-                    sendDataWithError(); // Re-send the segment (could be corrupted)
-                    this.resentSegments++; // Track the number of resent segments
+                    sendDataWithError(); // Here it make sure that it re-send the segment (could be corrupted)
+                    this.resentSegments++; // As for this it will track the number of resent segments
                 }
             }
         }
 
-        // After the file transfer is complete
+        // After completing the file transfer, I printed out the total segments sent to track the number of unique segments successfully transmitted.
+        // Additionally, I included the number of re-sent segments to monitor any retransmissions that occurred during the transfer.
         System.out.println("Total Segments Sent: " + this.totalSegments);
         System.out.println("Re-sent Segments: " + this.resentSegments);
     }
