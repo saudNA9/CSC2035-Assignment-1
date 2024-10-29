@@ -83,10 +83,9 @@ public class Protocol {
         try {
             // Create a MetaData object and set its values
             MetaData metaData = new MetaData();
-            metaData.setSize(this.fileSize); // Instead of setFileSize()
-            metaData.setName(this.outputFileName); // Instead of setFileName()
-            metaData.setMaxSegSize(this.maxPayload); // Instead of setMaxPayloadSize()
-
+            metaData.setSize(this.fileSize); // Set file size
+            metaData.setName(this.outputFileName); // Set file name
+            metaData.setMaxSegSize(this.maxPayload); // Set max payload size
 
             // Serialize MetaData to bytes using ObjectOutputStream
             ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
@@ -101,14 +100,17 @@ public class Protocol {
             // Send the metadata packet through the socket
             this.socket.send(packet);
 
-            // Output message to track progress
-            System.out.println("SENDER: Metadata sent successfully (file: " + this.outputFileName + ", size: " + this.fileSize + ", max payload size: " + this.maxPayload + ")");
+            // Output message to confirm metadata sent
+            System.out.println("SENDER: meta data is sent (file name, size, payload size): ("
+                    + this.outputFileName + ", " + this.fileSize + ", " + this.maxPayload + ")");
+            System.out.println("----------------------------------------------------");
 
         } catch (IOException e) {
             // Handle IO exceptions
             System.err.println("SENDER: Error while sending metadata: " + e.getMessage());
         }
     }
+
 
 
     public int readData() {
