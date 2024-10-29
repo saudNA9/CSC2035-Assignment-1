@@ -81,32 +81,32 @@ public class Protocol {
      */
     public void sendMetadata() {
         try {
-            // Create a MetaData object and set its values
+            // I have created a MetaData object and assigned its values.
             MetaData metaData = new MetaData();
             metaData.setSize(this.fileSize); // Set file size
             metaData.setName(this.outputFileName); // Set file name
             metaData.setMaxSegSize(this.maxPayload); // Set max payload size
 
-            // Serialize MetaData to bytes using ObjectOutputStream
+            // In this case, I utilised an ObjectOutputStream to serialise MetaData to bytes.
             ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
             ObjectOutputStream objStream = new ObjectOutputStream(byteStream);
             objStream.writeObject(metaData);
             objStream.flush();
             byte[] metaDataBytes = byteStream.toByteArray();
 
-            // Create a DatagramPacket to send the metadata
+            // Here I created a DatagramPacket to send the metadata
             DatagramPacket packet = new DatagramPacket(metaDataBytes, metaDataBytes.length, this.ipAddress, this.portNumber);
 
-            // Send the metadata packet through the socket
+            // I've added this to send the metadata packet through the socket
             this.socket.send(packet);
 
-            // Output message to confirm metadata sent
+            // An output message to confirm metadata sent
             System.out.println("SENDER: meta data is sent (file name, size, payload size): ("
                     + this.outputFileName + ", " + this.fileSize + ", " + this.maxPayload + ")");
             System.out.println("----------------------------------------------------");
 
         } catch (IOException e) {
-            // Handle IO exceptions
+            // Here I've used this to handle IO exceptions
             System.err.println("SENDER: Error while sending metadata: " + e.getMessage());
         }
     }
