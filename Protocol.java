@@ -186,29 +186,27 @@ public class Protocol {
      */
     public void sendData() {
         try {
-            // Add separator line before sending the segment
-
-            // Calculate checksum for the payload
+            // This will calculate checksum for the payload
             int checksumValue = checksum(this.dataSeg.getPayLoad(), false);
             this.dataSeg.setChecksum(checksumValue);
 
-            // Serialize the data segment into bytes
+            // I've made this to serialize the data segment into bytes
             ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
             ObjectOutputStream objStream = new ObjectOutputStream(byteStream);
             objStream.writeObject(this.dataSeg);
             objStream.flush();
             byte[] segmentBytes = byteStream.toByteArray();
 
-            // Create a DatagramPacket to send the data segment
+            // I have created a DatagramPacket to send the data segment
             DatagramPacket packet = new DatagramPacket(segmentBytes, segmentBytes.length, this.ipAddress, this.portNumber);
 
-            // Send the packet
+            // I've done this to send the packet
             this.socket.send(packet);
 
-            // Increment total segments
+            // This will increment total segments
             this.totalSegments++;
 
-            // Print progress message
+            // As for here it will print progress message
             System.out.println("SENDER: Sending segment: sq: " + this.dataSeg.getSq() + ", size: " + this.dataSeg.getSize() + ", checksum: " + checksumValue + ", content: (" + this.dataSeg.getPayLoad() + ")");
 
         } catch (IOException e) {
