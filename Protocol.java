@@ -378,6 +378,8 @@ public class Protocol {
     /*
      *  transfer the given file using the resources provided by the protocol structure using GoBackN.
      */
+
+    // I have set up Go-Back-N parameters (base, nextSeqNum) to manage the window size, ACK tracking, and transfer status.
     void sendFileNormalGBN(int window) throws IOException {
         int base = 0;
         int nextSeqNum = 0;
@@ -388,7 +390,7 @@ public class Protocol {
         System.out.println("---------------Sending the segments in the initial window --------------------------");
 
         while (!transferComplete) {
-            // Send segments within the window and if there are bytes left to read
+            // I have sent segments within the window size until I either reach the data end or window limit.
             while (nextSeqNum < base + window && remainingBytes > 0) {
                 if (readData() == -1) {
                     System.out.println("SENDER: End of file reached.");
@@ -402,7 +404,7 @@ public class Protocol {
                 nextSeqNum++;
             }
 
-            // Display the current outstanding ACKs
+            // I have showed outstanding ACKs for current segments and wait for correct ACK to slide the window.
             System.out.println("\n-----------------------------------------------------------");
             System.out.println("SENDER: Waiting for an ack and slide the window if the ack number is correct");
             System.out.println("-----------------------------------------------------------");
@@ -412,7 +414,7 @@ public class Protocol {
             }
             System.out.println("]");
 
-            // Receive acknowledgments and slide the window as needed
+            // I have processed each ACK, slide the window, and send the next segment if possible.
             while (expectedAck < nextSeqNum) {
                 if (receiveAck(expectedAck % (window + 1))) {
                     base++;
@@ -427,7 +429,7 @@ public class Protocol {
                             totalSegments++;
                             nextSeqNum++;
 
-                            // Display updated outstanding ACKs
+                            // Here I've added thus line code to display updated outstanding ACKs
                             System.out.println("\n-----------------------------------------------------------");
                             System.out.print("SENDER: current outstanding Acks [ ");
                             for (int i = base; i < nextSeqNum; i++) {
@@ -437,18 +439,18 @@ public class Protocol {
                         }
                     }
                 } else {
-                    // Break if the ACK is not the expected one
+                    // As for this it will break if the ACK is not the expected one
                     break;
                 }
             }
 
-            // Complete transfer when all segments are sent and acknowledged
+            // This will complete transfer when all segments are sent and acknowledged
             if (remainingBytes <= 0 && expectedAck >= nextSeqNum) {
                 transferComplete = true;
             }
         }
 
-        // Final message with total segments sent
+        // This will show a final message with the total segments sent
         System.out.println("Total segments sent: " + totalSegments);
     }
 
