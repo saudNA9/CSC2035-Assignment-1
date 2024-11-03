@@ -1,5 +1,5 @@
 /*
- * Replace the following string of 0s with your student number
+ * Saud Najem Saad Al-najem
  * 230266960
  */
 
@@ -15,7 +15,7 @@ import java.net.DatagramPacket;
 import java.io.FileInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ObjectInputStream;
-import java.net.SocketTimeoutException; // This import is necessary for the SocketTimeoutException
+import java.net.SocketTimeoutException;
 
 
 public class Protocol {
@@ -110,6 +110,7 @@ public class Protocol {
             System.err.println("SENDER: Error while sending metadata: " + e.getMessage());
         }
     }
+    // End of Part 1: Protocol RFT sending meta data
 
 
 
@@ -264,7 +265,7 @@ public class Protocol {
             return false;
         }
     }
-
+// End of part 2: Protocol RFT using Stop and Wait protocol
 
 
 
@@ -371,6 +372,7 @@ public class Protocol {
         System.out.println("Total Segments Sent: " + this.totalSegments);
         System.out.println("Re-sent Segments: " + this.resentSegments);
     }
+    // End of part 3: Protocol RFT using the Stop and Wait protocol with re-transmission
 
 
 
@@ -453,10 +455,7 @@ public class Protocol {
         // This will show a final message with the total segments sent
         System.out.println("Total segments sent: " + totalSegments);
     }
-
-
-
-
+// End of part 4: Protocol RFT using the GOBackN protocol
 
 
 
