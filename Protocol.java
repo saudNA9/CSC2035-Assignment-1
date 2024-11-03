@@ -113,7 +113,16 @@ public class Protocol {
     // End of Part 1: Protocol RFT sending meta data
 
 
-
+    /*
+     * This method:
+     *  	read the next chunk of data from the file into the data segment (dataSeg) payload.
+     *  	set the correct type of the data segment
+     *  	set the correct sequence number of the data segment.
+     *  	set the data segment's size field to the number of bytes read from the file
+     * This method DOES NOT:
+     * set the checksum of the data segment.
+     * The method returns -1 if this is the last data segment (no more data to be read) and 0 otherwise.
+     */
     public int readData() {
         FileInputStream fileInputStream = null; //I've declared the FileInputStream locally
 
