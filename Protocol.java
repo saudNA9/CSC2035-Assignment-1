@@ -358,19 +358,19 @@ public class Protocol {
             int retries = 0; // This will keep track of the number of retries for this segment
 
             // As for here it will wait for ACK or retransmit if no ACK received
-            while (retries < this.maxRetries) {
+            while (retries <= this.maxRetries) {
                 boolean ackReceived = receiveAck(this.dataSeg.getSq());
                 if (ackReceived) {
                     // This shows that ACK received, break out of retry loop
                     break;
                 } else {
                     retries++; // Here it will Increment the retry count
-                    if (retries >= this.maxRetries) {
+                    if (retries > this.maxRetries) {
                         System.err.println("SENDER: Max retries reached. Terminating client.");
                         System.exit(1); // This will terminate after max retries
                     }
                     System.out.println("SENDER: TIMEOUT ALERT: Re-sending the same segment again, current retry: " + retries);
-                    sendDataWithError(); // Here it make sure that it re-send the segment (could be corrupted)
+                    sendDataWithError(); // Here it makes sure that it re-sends the segment (could be corrupted)
                     this.resentSegments++; // As for this it will track the number of resent segments
                 }
             }
